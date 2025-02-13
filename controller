@@ -1,0 +1,80 @@
+package com.example.oop.controller;
+
+import com.example.oop.entities.Book;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+@RestController
+@RequestMapping("/index")
+public class MyController {
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final List<Book> books = new CopyOnWriteArrayList<>();
+
+    @GetMapping
+    public String home() {
+        return "Welcome to the Book API!";
+    }
+
+    @GetMapping("/book")
+    public String getSampleBook() {
+        Book book = new Book(1, "Sample Author", "Sample Title");
+        try {
+            return objectMapper.writeValueAsString(book);
+        } catch (JsonProcessingException e) {
+            return "Error converting book to JSON";
+        }
+    }
+
+    @PostMapping("/createBook")
+    public String createBook(@RequestParam int id,
+                             @RequestParam String title,
+                             @RequestParam String author) {
+        books.add(new Book(id, author, title));
+        return "Book added successfully!";
+    }
+
+    @GetMapping("/allBooks")
+    public List<Book> getAllBooks() {
+        return books;
+    }
+
+    @GetMapping("/findBook")
+    public String findBook(@RequestParam String title) {
+        Optional<Book> book = books.stream()
+                .filter(b -> b.getTitle().equalsIgnoreCase(title))
+                .findFirst();
+
+        return book.map(value -> {
+            try {
+                return objectMapper.writeValueAsString(value);
+            } catch (JsonProcessingException e) {
+                return "Error converting book to JSON";
+            }
+        }).orElse("Book not found");
+    }
+
+    @DeleteMapping("/deleteBook")
+    public String deleteBook(@RequestParam String title) {
+        boolean removed = books.removeIf(book -> book.getTitle().equalsIgnoreCase(title));
+        return removed ? "Book deleted successfully!" : "Book not found!";
+    }
+
+    @PutMapping("/updateBook")
+    public String updateBook(@RequestParam String oldTitle,
+                             @RequestParam String newTitle,
+                             @RequestParam String newAuthor) {
+        for (Book book : books) {
+            if (book.getTitle().equalsIgnoreCase(oldTitle)) {
+                book.setTitle(newTitle);
+                book.setAuthor(newAuthor);
+                return "Book updated successfully!";
+            }
+        }
+        return "Book not found!";
+    }
+}
